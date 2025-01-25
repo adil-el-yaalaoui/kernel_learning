@@ -1,6 +1,7 @@
 from datasets import SyntheticData
 from experiments import *
-from figure_plot import plot_solutions
+from figure_plot import plot_solutions,plot_solutions_nn
+from nn_experiment import *
 import torch
 import matplotlib.pyplot as plt
 
@@ -21,6 +22,12 @@ else:
     DEV_MEM = 8  # Default available RAM in GB
 
 
+# Uncomment this if you want to observe the results only for shallow NN
+#rkhs_norms,classification_errors=get_experiment_results_separable_nn(noise_levels,training_sizes,gamma,epochs,batch_size,n_test)
+#plot_solutions_nn(fig,noise_levels,training_sizes,classification_errors,rkhs_norms)
+
+
+# Uncomment this if you want to see the results for all models including shallow NN
 rkhs_norms,classification_errors=get_experiment_results_separable(noise_levels,training_sizes,gamma,epochs,batch_size,n_test)
 plot_solutions(fig,noise_levels,training_sizes,classification_errors,rkhs_norms)
 
