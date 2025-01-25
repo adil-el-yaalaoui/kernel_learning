@@ -58,7 +58,7 @@ def plot_solutions_nn(fig,noise_levels:list,training_sizes:list,classification_e
 
     colors=["blue", "orange", "purple"]
     for i,noise in enumerate(noise_levels):
-        ax_rkhs.plot(training_sizes, rkhs_norms[noise]["NN"], label=f"Interpolated (Noise={int(noise * 100)}%)", color=colors[i], linestyle="--", marker="s")
+        ax_rkhs.plot(training_sizes, rkhs_norms[noise]["NN"], label=f"NN (Noise={int(noise * 100)}%)", color=colors[i], linestyle="--", marker="s")
 
     ax_rkhs.set_xlabel("Training Size")
     ax_rkhs.set_ylabel("RKHS Norm")
