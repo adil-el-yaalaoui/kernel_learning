@@ -16,8 +16,7 @@ else:
 
 
 
-def shallow_nn_solution(x_train,y_train,x_test,y_test,epochs=20,batch_size=32,print_result=False):
-    model=nn_model.NNshallow(input_dim=x_train.shape[1],output_dim=1)
+def nn_solution(model,x_train,y_train,x_test,y_test,epochs=20,batch_size=32,print_result=False):
     criterion=nn.MSELoss()
     #criterion=torch.nn.BCELoss()
     optimizer=torch.optim.Adam(model.parameters(),lr=1e-3)
@@ -26,8 +25,6 @@ def shallow_nn_solution(x_train,y_train,x_test,y_test,epochs=20,batch_size=32,pr
     dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
     dataset_test=TensorDataset(x_test,y_test)
     data_test_loader=DataLoader(dataset_test, batch_size=x_test.shape[0],shuffle=False)
-
-    
 
     for epoch in range(epochs):
         model.train()
@@ -64,26 +61,30 @@ def shallow_nn_solution(x_train,y_train,x_test,y_test,epochs=20,batch_size=32,pr
 
 
 
-def get_experiment_results_separable_nn(noise_levels:list,training_sizes:list,gamma,epochs,batch_size,n_test):
-
-      rkhs_norms = {noise: {"NN": []} for noise in noise_levels}
-      classification_errors = {noise: {"NN": []} for noise in noise_levels}
-      for noise in noise_levels:
+def get_experiment_results_separable_nn(model_to_test,noise_levels:list,training_sizes:list,gamma,epochs,batch_size,n_test):
+    if model_to_test=="Shallow":
+        model=nn_model.NNshallow(50,1)
+    elif model_to_test=="Deep":
+        model=nn_model.NNdeep(50,1)
+    rkhs_norms = {noise: {"NN": []} for noise in noise_levels}
+    classification_errors = {noise: {"NN": []} for noise in noise_levels}
+    for noise in noise_levels:
         for n_train in training_sizes:
-              data=SyntheticData()
-              X_train, y_train = data.generate_synthetic_data_separable(n_train, noise=noise)
-              X_test, y_test = data.generate_synthetic_data_separable(n_test, noise=noise)
-              X_train, y_train = X_train.to(DEVICE), y_train.to(DEVICE)
-              X_test = X_test.to(DEVICE)
+            data=SyntheticData()
+            X_train, y_train = data.generate_synthetic_data_separable(n_train, noise=noise)
+            X_test, y_test = data.generate_synthetic_data_separable(n_test, noise=noise)
+            X_train, y_train = X_train.to(DEVICE), y_train.to(DEVICE)
+            X_test = X_test.to(DEVICE)
 
-              # Interpolated solution
-              shallow_nn,err_classif_nn=shallow_nn_solution(X_train,y_train,X_test,y_test,epochs,batch_size)
-              all_weights = torch.cat([param.view(-1) for param in shallow_nn.parameters()])
-              rkhs_norm_nn=all_weights.norm(p=2).detach().numpy()
-              rkhs_norms[noise]["NN"].append(rkhs_norm_nn)
-              classification_errors[noise]["NN"].append(100 * err_classif_nn)
+            # Interpolated solution
+              
+            shallow_nn,err_classif_nn=nn_solution(model,X_train,y_train,X_test,y_test,epochs,batch_size)
+            all_weights = torch.cat([param.view(-1) for param in shallow_nn.parameters()])
+            rkhs_norm_nn=all_weights.norm(p=2).detach().numpy()
+            rkhs_norms[noise]["NN"].append(rkhs_norm_nn)
+            classification_errors[noise]["NN"].append(100 * err_classif_nn)
 
-      return rkhs_norms,classification_errors
+    return rkhs_norms,classification_errors
 
 
 
