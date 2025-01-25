@@ -7,6 +7,7 @@ from eigenpro2.models import KernelModel
 from sklearn.metrics import accuracy_score
 import numpy as np
 from datasets import SyntheticData
+from nn_experiment import shallow_nn_solution
 
 if torch.cuda.is_available():
     DEVICE = torch.device("cuda")
@@ -78,8 +79,8 @@ def bayes_solution(x_test,y_test,threshsold):
 
 def get_experiment_results_separable(noise_levels:list,training_sizes:list,gamma,epochs,batch_size,n_test):
 
-      rkhs_norms = {noise: {"interpolated": [], "overfitted": []} for noise in noise_levels}
-      classification_errors = {noise: {"interpolated": [], "overfitted": [], "bayes": []} for noise in noise_levels}
+      rkhs_norms = {noise: {"interpolated": [], "overfitted": [],"NN":[]} for noise in noise_levels}
+      classification_errors = {noise: {"interpolated": [], "overfitted": [], "NN":[],"bayes": []} for noise in noise_levels}
       for noise in noise_levels:
 
         for n_train in training_sizes:
@@ -103,6 +104,13 @@ def get_experiment_results_separable(noise_levels:list,training_sizes:list,gamma
               # thresghold = 5 for separable data in experience 1
               error_bayes=bayes_solution(X_test,y_test,threshsold=5)
               classification_errors[noise]["bayes"].append(100 * error_bayes)
+
+              #Shallow Neural Network Solution
+              shallow_nn,err_classif_nn=shallow_nn_solution(X_train,y_train,X_test,y_test,epochs,batch_size)
+              all_weights = torch.cat([param.view(-1) for param in shallow_nn.parameters()])
+              rkhs_norm_nn=all_weights.norm(p=2).detach().numpy()
+              rkhs_norms[noise]["NN"].append(rkhs_norm_nn)
+              classification_errors[noise]["NN"].append(100 * err_classif_nn)
 
         
 
