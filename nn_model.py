@@ -31,11 +31,13 @@ class NNdeep(nn.Module):
         self.l4=nn.Linear(hidden_dim,hidden_dim)
         self.lout=nn.Linear(hidden_dim,self.out_dim)
 
+        self.activ=nn.ReLU()
+
         
     def forward(self, x):
-        x = nn.ReLU(self.l1(x))
-        x = nn.ReLU(self.l2(x))
-        x = nn.ReLU(self.l3(x))
-        x = nn.ReLU(self.l4(x))
+        x = self.activ(self.l1(x))
+        x = self.activ(self.l2(x))
+        x = self.activ(self.l3(x))
+        x = self.activ(self.l4(x))
         x = self.lout(x)
         return x
