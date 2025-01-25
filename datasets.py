@@ -1,6 +1,7 @@
 import numpy as np
 from torchvision import datasets, transforms
 import torch
+from torch.utils.data import DataLoader
 
 
 class SyntheticData:
@@ -42,32 +43,23 @@ class SyntheticData:
 
         return torch.tensor(X), torch.tensor(y).float()
     
-    def load_mnist_data(self):
+    def load_mnist_data(self,batch_size):
         transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.5,), (0.5,))])
         mnist_train = datasets.MNIST(root='./data', train=True, download=True, transform=transform)
         mnist_test = datasets.MNIST(root='./data', train=False, download=True, transform=transform)
 
-        # Flatten images and convert to numpy arrays
-        X_train = mnist_train.data.numpy().reshape(-1, 28 * 28) / 255.0  # Scale pixel values
-        y_train = mnist_train.targets.numpy()
-        X_test = mnist_test.data.numpy().reshape(-1, 28 * 28) / 255.0
-        y_test = mnist_test.targets.numpy()
+        mnist_train_loader=DataLoader(mnist_train,batch_size,shuffle=True)
+        mnist_test_loader=DataLoader(mnist_test,batch_size,shuffle=True)
 
-        # Normalize features
-        X_train, X_test = (X_train - 0.5) / 0.5, (X_test - 0.5) / 0.5  # Normalize to [-1, 1]
-        return X_train, y_train, X_test, y_test
+        return mnist_train_loader,mnist_test_loader
     
-    def load_cifar10_data(self):
+    def load_cifar10_data(self,batch_size):
         transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.5,), (0.5,))])
         cifar_train = datasets.CIFAR10(root='./data', train=True, download=True, transform=transform)
         cifar_test = datasets.CIFAR10(root='./data', train=False, download=True, transform=transform)
 
-        # Flatten images and convert to numpy arrays
-        X_train = cifar_train.data.numpy().reshape(-1, cifar_train.data.shape[1]*cifar_train.data.shape[2]) / 255.0  # Scale pixel values
-        y_train = cifar_train.targets.numpy()
-        X_test = cifar_test.data.numpy().reshape(-1, cifar_test.data.shape[1]*cifar_test.data.shape[2]) / 255.0
-        y_test = cifar_test.targets.numpy()
+        cifar_train_loader=DataLoader(cifar_train,batch_size,shuffle=True)
+        cifar_test_loader=DataLoader(cifar_test,batch_size,shuffle=True)
 
-        # Normalize features
-        X_train, X_test = (X_train - 0.5) / 0.5, (X_test - 0.5) / 0.5  # Normalize to [-1, 1]
-        return X_train, y_train, X_test, y_test
+
+        return cifar_train_loader,cifar_test_loader
