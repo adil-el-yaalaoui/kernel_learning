@@ -23,12 +23,13 @@ else:
 
 
 # Uncomment this if you want to observe the results only for shallow NN
-#rkhs_norms,classification_errors=get_experiment_results_separable_nn(noise_levels,training_sizes,gamma,epochs,batch_size,n_test)
-#plot_solutions_nn(fig,noise_levels,training_sizes,classification_errors,rkhs_norms)
+model_to_test="Deep"
+rkhs_norms,classification_errors=get_experiment_results_separable_nn(model_to_test,noise_levels,training_sizes,gamma,epochs,batch_size,n_test)
+plot_solutions_nn(fig,noise_levels,training_sizes,classification_errors,rkhs_norms)
 
 
 # Uncomment this if you want to see the results for all models including shallow NN
-rkhs_norms,classification_errors=get_experiment_results_separable(noise_levels,training_sizes,gamma,epochs,batch_size,n_test)
-plot_solutions(fig,noise_levels,training_sizes,classification_errors,rkhs_norms)
+#rkhs_norms,classification_errors=get_experiment_results_separable(noise_levels,training_sizes,gamma,epochs,batch_size,n_test)
+#plot_solutions(fig,noise_levels,training_sizes,classification_errors,rkhs_norms)
 
 #print(rkhs_norms)
