@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 
 
-def plot_solutions(fig,noise_levels:list,training_sizes:list,classification_errors:dict,rkhs_norms:dict):
+def plot_solutions(fig,noise_levels:list,training_sizes:list,classification_errors:dict,rkhs_norms:dict, bayes=True):
 
     for i, noise in enumerate(noise_levels):
         ax = fig.add_subplot(3, 2, 2 * i + 1)  # 3 rows, left column (1, 3, 5)
@@ -9,7 +9,8 @@ def plot_solutions(fig,noise_levels:list,training_sizes:list,classification_erro
         ax.plot(training_sizes, classification_errors[noise]["interpolated"], label="Interpolated", linestyle="--", marker="s", color="blue")
         ax.plot(training_sizes, classification_errors[noise]["overfitted"], label="Overfitted", linestyle="-", marker="o", color="red")
         ax.plot(training_sizes, classification_errors[noise]["NN"], label="NN", linestyle="-.", marker="x", color="orange")
-        ax.plot(training_sizes, classification_errors[noise]["bayes"], label="Bayes Optimal", linestyle=":", color="green")
+        if bayes:
+            ax.plot(training_sizes, classification_errors[noise]["bayes"], label="Bayes Optimal", linestyle=":", color="green")
 
         ax.set_xlabel("Training Size")
         ax.set_ylabel("Classification Error (%)")
