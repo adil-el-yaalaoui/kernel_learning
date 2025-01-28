@@ -10,7 +10,7 @@ n_test = 1000
 noise_levels = [0.0, 0.01, 0.1]  # 0%, 1%, 10% noise
 gamma = 0.1  # Kernel bandwidth
 epochs = 10
-batch_size=256
+batch_size=2000
 reg_lambda = 0.1  # Regularization parameter for overfitting
 fig = plt.figure(figsize=(14, 12))
 
@@ -23,13 +23,13 @@ else:
 
 
 # Uncomment this if you want to observe the results only for shallow NN
-model_to_test="Deep"
-rkhs_norms,classification_errors=get_experiment_results_separable_nn(model_to_test,noise_levels,training_sizes,gamma,epochs,batch_size,n_test)
-plot_solutions_nn(fig,noise_levels,training_sizes,classification_errors,rkhs_norms)
+model_to_test="Shallow"
+#rkhs_norms,classification_errors=get_experiment_results_separable_nn(model_to_test,noise_levels,training_sizes,gamma,epochs,batch_size,n_test)
+#plot_solutions_nn(fig,noise_levels,training_sizes,classification_errors,rkhs_norms)
 
 
 # Uncomment this if you want to see the results for all models including shallow NN
-#rkhs_norms,classification_errors=get_experiment_results_separable(noise_levels,training_sizes,gamma,epochs,batch_size,n_test)
-#plot_solutions(fig,noise_levels,training_sizes,classification_errors,rkhs_norms)
+rkhs_norms,classification_errors=get_experiment_results_non_separable_ntk(noise_levels,training_sizes,epochs,batch_size,n_test)
+plot_solutions(fig,noise_levels,training_sizes,classification_errors,rkhs_norms)
 
 #print(rkhs_norms)
