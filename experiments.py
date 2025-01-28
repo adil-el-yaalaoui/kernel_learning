@@ -21,15 +21,15 @@ else:
     DEV_MEM = 8  # Default available RAM in GB
 
 # ?
-k=160
+k=300
 
 
 def compute_gaussian_kernel(X: torch.Tensor, Y: torch.Tensor, gamma: float) -> torch.Tensor:
         """
         Computes the Gaussian kernel matrix between two sets of samples.
         X (torch.Tensor): First sample set of shape (n_samples, n_features).
-                Y (torch.Tensor): Second sample set of shape (m_samples, n_features).
-                gamma (float): Kernel coefficient for Gaussian function.
+        Y (torch.Tensor): Second sample set of shape (m_samples, n_features).
+        gamma (float): Kernel coefficient for Gaussian function.
         """
         return torch.exp(-gamma * torch.cdist(X, Y, p=2) ** 2)
 
@@ -48,7 +48,7 @@ def interpolated_solution(x_train: torch.Tensor, y_train: torch.Tensor, x_test: 
         alpha_interp = torch.linalg.solve(K_train, y_train)
 
         # Compute RKHS norm for interpolated solution
-        rkhs_norm_interp = torch.sqrt((alpha_interp @ (K_train @ alpha_interp)))
+        rkhs_norm_interp = torch.sqrt((alpha_interp.T @ (K_train @ alpha_interp)))
         rkhs_norm_interp = rkhs_norm_interp.item()
 
         # Predict on the test set
@@ -94,14 +94,20 @@ def overfitted_solution(x_train: torch.Tensor, y_train: torch.Tensor, x_test: to
                         x_train, y_train_prepared, x_test, y_test_prepared,
                         n_subsamples=n_subsamples, epochs=epochs, mem_gb=DEV_MEM,
                         bs=batch_size, print_every=epochs,run_epoch_eval=False)
-                
-        rkhs_norm_overfit = torch.norm(model_overfit.weight).item()
+
+
+
+        #rkhs_norm_overfit = torch.norm(model_overfit.weight).item()
+        K_train = kernel_fn(x_train, x_train)  # Compute the full kernel matrix
+        alpha_overfit = model_overfit.weight  # Extract learned weights
 
         # Predict and calculate classification error for overfitted
         if num_classes>1:
+                rkhs_norm_overfit = torch.sqrt(torch.sum(alpha_overfit.T @ (K_train @ alpha_overfit))).item()
                 y_pred_overfit = model_overfit.predict(x_test).argmax(dim=1)
         else:
                 y_pred_overfit = model_overfit.predict(x_test).sign().squeeze()
+                rkhs_norm_overfit = torch.sqrt((alpha_overfit.T @ (K_train @ alpha_overfit))).item()
         error_overfit = 1 - accuracy_score(y_test.cpu().numpy(), y_pred_overfit.cpu().numpy())
 
         return rkhs_norm_overfit,error_overfit
@@ -231,7 +237,7 @@ def interpolated_solution_multiclass(x_train: torch.Tensor, y_train: torch.Tenso
         alpha_interp = torch.linalg.solve(K_train, y_train)
 
         # Compute RKHS norm for interpolated solution
-        rkhs_norm_interp = torch.sqrt(torch.sum(alpha_interp * (K_train @ alpha_interp)))
+        rkhs_norm_interp = torch.sqrt(torch.sum(alpha_interp.T * (K_train @ alpha_interp)))
         rkhs_norm_interp = rkhs_norm_interp.item()
 
         # Predict on the test set
