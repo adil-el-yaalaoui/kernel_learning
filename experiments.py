@@ -2,13 +2,13 @@ import numpy as np
 from sklearn.metrics import accuracy_score
 
 import torch
-from eigenpro2.kernels import gaussian
+from eigenpro2.kernels import gaussian,ntk_relu
 from eigenpro2.models import KernelModel
 from sklearn.metrics import accuracy_score
-import numpy as np
 from datasets import SyntheticData
 from nn_experiment import nn_solution
 import nn_model
+import eigenpro2
 
 if torch.cuda.is_available():
     DEVICE = torch.device("cuda")
@@ -19,6 +19,97 @@ else:
 
 # ?
 k=160
+
+def k_ntk(x, xprime):
+    with torch.no_grad():
+        v = torch.linalg.norm(x) * torch.linalg.norm(xprime)
+        u = .99999 * torch.dot(x, xprime) / v
+        return v * (u * (torch.pi - torch.arccos(u) + torch.sqrt(1 - u ** 2) )/ (2 * np.pi)
+                    +  u * (torch.pi - torch.arccos(u)) /  (2 * np.pi))
+
+def ntk_kernel(x,z):
+    n,_=x.shape
+    m,_=z.shape
+    H = torch.empty((n, m))
+    for i in range(n):
+        for j in range(m):
+            H[i,j] = k_ntk(x[i], z[j])
+
+    return H
+
+def kappa(u,v):
+    u=.99999*u
+    return v * (u * (torch.pi - torch.arccos(u) + torch.sqrt(1 - u ** 2) )/ (2 * np.pi)
+                    +  u * (torch.pi - torch.arccos(u)) /  (2 * np.pi))
+
+def kappa2(u):
+    u=.99999*u
+    return 2*u/torch.pi * (torch.pi - torch.arccos(u))  + torch.sqrt(1 - u ** 2) /torch.pi
+
+def easier_ntk(x,z):
+    inner_prod=x@z.T
+    norm_x=x.norm(dim=-1)
+    norm_z=z.norm(dim=-1)
+    norm_mat=norm_x.unsqueeze(1)@norm_z.unsqueeze(1).T
+
+    return kappa(inner_prod/norm_mat,norm_mat)
+
+def easier_ntk2(x,z):
+    inner_prod=x@z.T
+    norm_x=x.norm(dim=-1)
+    norm_z=z.norm(dim=-1)
+    norm_mat=norm_x.unsqueeze(1)@norm_z.unsqueeze(1).T
+
+    return norm_mat*kappa2(inner_prod/norm_mat)
+
+
+
+def interpolated_solution_ntk(x_train,y_train,x_test,y_test):
+        
+        K_train = easier_ntk2(x_train, x_train)
+        # Solve for alpha = K^-1 y
+        alpha_interp = torch.linalg.solve(K_train, y_train)
+
+        # Compute RKHS norm for interpolated solution
+        rkhs_norm_interp = torch.sqrt((alpha_interp @ (K_train @ alpha_interp)))
+        rkhs_norm_interp = rkhs_norm_interp.item()
+
+        # Predict on the test set
+        K_test_interp = easier_ntk2(x_train, x_test)
+        y_pred_interp = torch.sign(K_test_interp.T @ alpha_interp).squeeze()
+        error_interp = 1 - accuracy_score(y_test.cpu().numpy(), y_pred_interp.cpu().numpy())
+
+        return rkhs_norm_interp,error_interp
+
+def overfitter_ntk(X_train,y_train,X_test,y_test,epochs,batch_size):
+        kernel_fn = lambda x, y: easier_ntk2(x, y)
+
+        model = eigenpro2.KernelModel(kernel_fn, X_train, 1, device=torch.device("cpu"))
+        n_subsamples = min(len(X_train), 5000)
+        top_q = min(160, n_subsamples - 1)
+
+        #results = model.fit(X_train, y_train.unsqueeze(1), X_test, y_test.unsqueeze(1), epochs=20, print_every=2, mem_gb=8,top_q=top_q)
+        try:
+             result_overfit = model.fit(
+                 X_train, y_train.unsqueeze(1), X_test, y_test.unsqueeze(1),
+                 n_subsamples=n_subsamples, epochs=epochs, mem_gb=DEV_MEM,
+                 bs=batch_size, top_q=top_q, print_every=epochs,run_epoch_eval=False)
+        except:
+              result_overfit = model.fit(
+                        X_train, y_train.unsqueeze(1), X_test, y_test.unsqueeze(1),
+                        n_subsamples=n_subsamples, epochs=epochs, mem_gb=DEV_MEM,
+                        bs=batch_size, print_every=epochs,run_epoch_eval=False)
+              
+        coeff_kernel=model.weight.squeeze() 
+        kernel_train=model.kernel_matrix(X_train)
+
+        rkhs_norm_overfit = torch.sqrt(coeff_kernel@(kernel_train@coeff_kernel))
+
+        # Predict and calculate classification error for overfitted
+        y_pred_overfit = model.forward(X_test).sign().squeeze()
+        error_overfit = 1 - accuracy_score(y_test.cpu().numpy(), y_pred_overfit.cpu().numpy())
+
+        return rkhs_norm_overfit,error_overfit
 
 
 def compute_gaussian_kernel(X, Y, gamma):
@@ -78,13 +169,9 @@ def bayes_solution(x_test,y_test,threshsold):
         return error_bayes
 
 
-def get_experiment_results_separable(model_to_test,noise_levels:list,training_sizes:list,gamma,epochs,batch_size,n_test):
-        if model_to_test=="Shallow":
-                model=nn_model.NNshallow(50,1)
-        elif model_to_test=="Deep":
-                model=nn_model.NNdeep(50,1)
-        rkhs_norms = {noise: {"interpolated": [], "overfitted": [],"NN":[]} for noise in noise_levels}
-        classification_errors = {noise: {"interpolated": [], "overfitted": [], "NN":[],"bayes": []} for noise in noise_levels}
+def get_experiment_results_separable(noise_levels:list,training_sizes:list,gamma,epochs,batch_size,n_test):
+        rkhs_norms = {noise: {"interpolated": [], "overfitted": []} for noise in noise_levels}
+        classification_errors = {noise: {"interpolated": [], "overfitted": [],"bayes": []} for noise in noise_levels}
         for noise in noise_levels:
 
                 for n_train in training_sizes:
@@ -99,8 +186,38 @@ def get_experiment_results_separable(model_to_test,noise_levels:list,training_si
                         rkhs_norms[noise]["interpolated"].append(rkhs_norm_interp)
                         classification_errors[noise]["interpolated"].append(100 * error_interp)
 
-                        #Overfitted Solution
+                       #Overfitted Solution
                         rkhs_norm_overfit,error_overfit=overfitted_solution(X_train,y_train,X_test,y_test,gamma=gamma,epochs=epochs,batch_size=batch_size)
+                        rkhs_norms[noise]["overfitted"].append(rkhs_norm_overfit)
+                        classification_errors[noise]["overfitted"].append(100 * error_overfit)
+
+                        # Bayes Solution
+                        # thresghold = 5 for separable data in experience 1
+                        error_bayes=bayes_solution(X_test,y_test,threshsold=5)
+                        
+                        classification_errors[noise]["bayes"].append(100 * error_bayes)
+
+        return rkhs_norms,classification_errors
+
+
+def get_experiment_results_separable_ntk(noise_levels:list,training_sizes:list,epochs,batch_size,n_test):
+        rkhs_norms = {noise: {"interpolated": [], "overfitted": []} for noise in noise_levels}
+        classification_errors = {noise: {"interpolated": [], "overfitted": [],"bayes": []} for noise in noise_levels}
+        for noise in noise_levels:
+                for n_train in training_sizes:
+                        data=SyntheticData()
+                        X_train, y_train = data.generate_synthetic_data_separable(n_train, noise=noise)
+                        X_test, y_test = data.generate_synthetic_data_separable(n_test, noise=noise)
+                        X_train, y_train = X_train.to(DEVICE), y_train.to(DEVICE)
+                        X_test = X_test.to(DEVICE)
+
+                        # Interpolated solution
+                        rkhs_norm_interp,error_interp=interpolated_solution_ntk(X_train,y_train,X_test,y_test)
+                        rkhs_norms[noise]["interpolated"].append(rkhs_norm_interp)
+                        classification_errors[noise]["interpolated"].append(100 * error_interp)
+
+                       #Overfitted Solution
+                        rkhs_norm_overfit,error_overfit=overfitter_ntk(X_train,y_train,X_test,y_test,epochs=epochs,batch_size=batch_size)
                         rkhs_norms[noise]["overfitted"].append(rkhs_norm_overfit)
                         classification_errors[noise]["overfitted"].append(100 * error_overfit)
 
@@ -109,14 +226,36 @@ def get_experiment_results_separable(model_to_test,noise_levels:list,training_si
                         error_bayes=bayes_solution(X_test,y_test,threshsold=5)
                         classification_errors[noise]["bayes"].append(100 * error_bayes)
 
-                        #Shallow Neural Network Solution
-                        shallow_nn,err_classif_nn=nn_solution(model,X_train,y_train,X_test,y_test,epochs,batch_size)
-                        all_weights = torch.cat([param.view(-1) for param in shallow_nn.parameters()])
-                        rkhs_norm_nn=all_weights.norm(p=2).detach().numpy()
-                        rkhs_norms[noise]["NN"].append(rkhs_norm_nn)
-                        classification_errors[noise]["NN"].append(100 * err_classif_nn)
+        return rkhs_norms,classification_errors
 
-        
+
+def get_experiment_results_non_separable_ntk(noise_levels:list,training_sizes:list,epochs,batch_size,n_test):
+        rkhs_norms = {noise: {"interpolated": [], "overfitted": []} for noise in noise_levels}
+        classification_errors = {noise: {"interpolated": [], "overfitted": [],"bayes": []} for noise in noise_levels}
+        for noise in noise_levels:
+                for n_train in training_sizes:
+                        data=SyntheticData()
+                        X_train, y_train = data.generate_synthetic_data_non_separable(n_train, noise=noise)
+                        X_test, y_test = data.generate_synthetic_data_non_separable(n_test, noise=noise)
+                        X_train, y_train = X_train.to(DEVICE), y_train.to(DEVICE)
+                        X_test = X_test.to(DEVICE)
+
+                        # Interpolated solution
+                        rkhs_norm_interp,error_interp=interpolated_solution_ntk(X_train,y_train,X_test,y_test)
+                        rkhs_norms[noise]["interpolated"].append(rkhs_norm_interp)
+                        classification_errors[noise]["interpolated"].append(100 * error_interp)
+                        print("Overfit Begin ! ")
+                       #Overfitted Solution
+                        rkhs_norm_overfit,error_overfit=overfitter_ntk(X_train,y_train,X_test,y_test,epochs=epochs,batch_size=batch_size)
+                        rkhs_norms[noise]["overfitted"].append(rkhs_norm_overfit)
+                        classification_errors[noise]["overfitted"].append(100 * error_overfit)
+
+                        print("Overfit Over ! ")
+
+                        # Bayes Solution
+                        # thresghold = 5 for separable data in experience 1
+                        error_bayes=bayes_solution(X_test,y_test,threshsold=1)
+                        classification_errors[noise]["bayes"].append(100 * error_bayes)
 
         return rkhs_norms,classification_errors
 
