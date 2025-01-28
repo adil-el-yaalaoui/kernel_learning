@@ -237,7 +237,7 @@ def interpolated_solution_multiclass(x_train: torch.Tensor, y_train: torch.Tenso
         alpha_interp = torch.linalg.solve(K_train, y_train)
 
         # Compute RKHS norm for interpolated solution
-        rkhs_norm_interp = torch.sqrt(torch.sum(alpha_interp.T * (K_train @ alpha_interp)))
+        rkhs_norm_interp = torch.sqrt(torch.sum(alpha_interp.T @ (K_train @ alpha_interp)))
         rkhs_norm_interp = rkhs_norm_interp.item()
 
         # Predict on the test set
