@@ -8,8 +8,7 @@ def plot_solutions(fig,noise_levels:list,training_sizes:list,classification_erro
 
         ax.plot(training_sizes, classification_errors[noise]["interpolated"], label="Interpolated", linestyle="--", marker="s", color="blue")
         ax.plot(training_sizes, classification_errors[noise]["overfitted"], label="Overfitted", linestyle="-", marker="o", color="red")
-        ax.plot(training_sizes, classification_errors[noise]["NN"], label="NN", linestyle="-.", marker="x", color="orange")
-        ax.plot(training_sizes, classification_errors[noise]["bayes"], label="Bayes Optimal", linestyle=":", color="green")
+        ax.plot(training_sizes, classification_errors[noise]["bayes"], label="Bayes ", linestyle=":", marker="x", color="green")
 
         ax.set_xlabel("Training Size")
         ax.set_ylabel("Classification Error (%)")
@@ -25,7 +24,6 @@ def plot_solutions(fig,noise_levels:list,training_sizes:list,classification_erro
     for i,noise in enumerate(noise_levels):
         ax_rkhs.plot(training_sizes, rkhs_norms[noise]["interpolated"], label=f"Interpolated (Noise={int(noise * 100)}%)", color=colors[i], linestyle="--", marker="s")
         ax_rkhs.plot(training_sizes, rkhs_norms[noise]["overfitted"], label=f"Overfitted (Noise={int(noise * 100)}%)", color=colors[i], linestyle="-", marker="o")
-        ax_rkhs.plot(training_sizes, rkhs_norms[noise]["NN"], label=f"NN (Noise={int(noise * 100)}%)", color=colors[i], linestyle="-.", marker="x")
 
     ax_rkhs.set_xlabel("Training Size")
     ax_rkhs.set_ylabel("RKHS Norm")
