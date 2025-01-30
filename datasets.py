@@ -1,7 +1,14 @@
 import numpy as np
 from torchvision import datasets, transforms
-import torch
 from torch.utils.data import DataLoader
+import torch, os
+from torchvision.datasets import MNIST
+from torch.nn.functional import one_hot
+
+
+def unit_range_normalize(samples):
+    samples -= samples.min(dim=0, keepdim=True).values
+    return samples/samples.max(dim=1, keepdim=True).values
 
 
 class SyntheticData:
@@ -43,23 +50,38 @@ class SyntheticData:
 
         return torch.tensor(X), torch.tensor(y).float()
     
-    def load_mnist_data(self,batch_size):
-        transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.5,), (0.5,))])
-        mnist_train = datasets.MNIST(root='./data', train=True, download=True, transform=transform)
-        mnist_test = datasets.MNIST(root='./data', train=False, download=True, transform=transform)
+    def load_mnist_data(self,noise,DEVICE=torch.device("cpu")):
+        mnist_train = datasets.MNIST(root='./data', train=True, download=True)
+        mnist_test = datasets.MNIST(root='./data', train=False, download=True)
 
-        mnist_train_loader=DataLoader(mnist_train,batch_size,shuffle=True)
-        mnist_test_loader=DataLoader(mnist_test,batch_size,shuffle=True)
-
-        return mnist_train_loader,mnist_test_loader
+        x_train,y_train=mnist_train.data,mnist_train.targets
+        x_test,y_test=mnist_test.data,mnist_test.targets
     
-    def load_cifar10_data(self,batch_size):
-        transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.5,), (0.5,))])
-        cifar_train = datasets.CIFAR10(root='./data', train=True, download=True, transform=transform)
-        cifar_test = datasets.CIFAR10(root='./data', train=False, download=True, transform=transform)
 
-        cifar_train_loader=DataLoader(cifar_train,batch_size,shuffle=True)
-        cifar_test_loader=DataLoader(cifar_test,batch_size,shuffle=True)
+        # Flatten the data
+        x_train = x_train.reshape(x_train.shape[0], -1).to(DEVICE).float()
+        x_test = x_test.reshape(x_test.shape[0], -1).to(DEVICE).float()
+
+        # Normalize the data
+        x_train = unit_range_normalize(x_train)
+        x_test = unit_range_normalize(x_test)
+        
+
+        # Random permutation of labels with noise
+        num_samples_train = len(y_train)
+        num_to_permute_train = int(noise * num_samples_train)
+    
+        indices_to_permute = torch.randperm(num_samples_train)[:num_to_permute_train]
+        permuted_indices = indices_to_permute[torch.randperm(num_to_permute_train)]
+        y_permuted = y_train.clone()
+        y_permuted[indices_to_permute]=y_train[permuted_indices]
+
+        y_permuted=one_hot(y_permuted,num_classes=10).float()
+        y_test=one_hot(y_test,num_classes=10).float()
+
+        return x_train,y_permuted,x_test,y_test
+    
+
+ 
 
 
-        return cifar_train_loader,cifar_test_loader
