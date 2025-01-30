@@ -1,14 +1,14 @@
 import matplotlib.pyplot as plt
 
 
-def plot_solutions(fig,noise_levels:list,training_sizes:list,classification_errors:dict,rkhs_norms:dict,title):
+def plot_solutions(fig,noise_levels:list,training_sizes:list,training_sizes_inter,classification_errors:dict,rkhs_norms:dict,title):
 
     for i, noise in enumerate(noise_levels):
         ax = fig.add_subplot(3, 2, 2 * i + 1)  # 3 rows, left column (1, 3, 5)
 
-        ax.plot(training_sizes, classification_errors[noise]["interpolated"], label="Interpolated", linestyle="--", marker="s", color="blue")
+        ax.plot(training_sizes_inter, classification_errors[noise]["interpolated"], label="Interpolated", linestyle="--", marker="s", color="blue")
         ax.plot(training_sizes, classification_errors[noise]["overfitted"], label="Overfitted", linestyle="-", marker="o", color="red")
-        ax.plot(training_sizes, classification_errors[noise]["bayes"], label="Bayes ", linestyle=":", marker="x", color="green")
+        #ax.plot(training_sizes, classification_errors[noise]["bayes"], label="Bayes ", linestyle=":", marker="x", color="green")
 
         ax.set_xlabel("Training Size")
         ax.set_ylabel("Classification Error (%)")
@@ -22,7 +22,7 @@ def plot_solutions(fig,noise_levels:list,training_sizes:list,classification_erro
 
     colors=["blue", "orange", "purple"]
     for i,noise in enumerate(noise_levels):
-        ax_rkhs.plot(training_sizes, rkhs_norms[noise]["interpolated"], label=f"Interpolated (Noise={int(noise * 100)}%)", color=colors[i], linestyle=":", marker="s")
+        ax_rkhs.plot(training_sizes_inter, rkhs_norms[noise]["interpolated"], label=f"Interpolated (Noise={int(noise * 100)}%)", color=colors[i], linestyle=":", marker="s")
         ax_rkhs.plot(training_sizes, rkhs_norms[noise]["overfitted"], label=f"Overfitted (Noise={int(noise * 100)}%)", color=colors[i], linestyle="-", marker="o")
 
     ax_rkhs.set_xlabel("Training Size")
