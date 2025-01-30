@@ -5,9 +5,11 @@ from figure_plot import plot_solutions
 import torch
 import matplotlib.pyplot as plt
 
-training_sizes = [200, 1001, 2000, 5000, 10000]
+#training_sizes = [200, 1001, 2000, 5000, 10000]
+training_sizes = [2000, 3000, 5000, 20000,40000,60000]
+training_sizes_inter=[2000, 3000, 5000,20000]
 n_test = 1000
-noise_levels = [0.0, 0.01, 0.1]   # 0%, 1%, 10% noise
+noise_levels = [0.0,0.01,0.1]   # 0%, 1%, 10% noise
 gamma = 0.1  # Kernel bandwidth
 epochs = 10
 batch_size=1024
@@ -22,8 +24,9 @@ else:
     DEV_MEM = 8  # Default available RAM in GB
 
 
-kernel_to_test="NTK"
+kernel_to_test="Gaussian"
 data_to_test="separable"
-rkhs_norms,classification_errors=get_experiment_results(kernel_to_test,noise_levels,training_sizes,epochs,batch_size,n_test,data_to_test)
-plot_solutions(fig,noise_levels,training_sizes,classification_errors,rkhs_norms,"NTK_results")
+print(DEVICE)
+rkhs_norms,classification_errors=get_experiment_results_mnist(kernel_to_test,noise_levels,training_sizes,training_sizes_inter,epochs,batch_size,n_test)
+plot_solutions(fig,noise_levels,training_sizes,training_sizes_inter,classification_errors,rkhs_norms,"Gaussian_mnist_full_full_results")
 
